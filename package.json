@@ -1,0 +1,28 @@
+{
+  "name": "rses",
+  "version": "0.1.0",
+  "description": "Cross-resume between Claude Code, Codex CLI, and OpenCode sessions",
+  "bin": {
+    "rses": "./bin/rses.js"
+  },
+  "type": "module",
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yazcaleb/rses.git"
+  },
+  "homepage": "https://github.com/yazcaleb/rses",
+  "author": "yazcaleb",
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": ["claude", "codex", "opencode", "ai", "cli", "resume", "session", "handoff"],
+  "license": "MIT"
+}
