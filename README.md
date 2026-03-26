@@ -5,7 +5,7 @@ Cross-resume between Claude Code, Codex CLI, and OpenCode sessions. Pick up wher
 ## Install
 
 ```bash
-npm i -g rses-cli
+npm i -g rsess
 ```
 
 Requires Node.js 22+.
