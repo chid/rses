@@ -73,6 +73,23 @@ rses export codex <id>           # print handoff to stdout
 rses export claude <id> --turns 10
 ```
 
+## Aliases
+
+Power-user shorthand — type less, ship faster:
+
+| Alias | Expands to |
+|-------|-----------|
+| `cc`, `cl`, `c` | `claude` |
+| `cdx`, `cx`, `x` | `codex` |
+| `oc`, `o` | `opencode` |
+| `w` | `with` |
+
+```bash
+rses cc w cdx --last          # same as: rses claude with codex --last
+rses x w oc --last            # same as: rses codex with opencode --last
+rses ls cx                    # same as: rses ls codex
+```
+
 ## Flags
 
 | Flag | Description |

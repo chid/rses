@@ -24,6 +24,13 @@ import { lsSessions } from '../src/ls.js'
 import { pick } from '../src/picker.js'
 
 const VALID_TOOLS = new Set(['claude', 'codex', 'opencode'])
+const ALIASES = {
+  cc: 'claude', cl: 'claude', c: 'claude',
+  cdx: 'codex', cx: 'codex', x: 'codex',
+  oc: 'opencode', o: 'opencode',
+  w: 'with',
+}
+function resolve_alias(s) { return ALIASES[s] || s }
 const RESUME_HINTS = {
   claude: '  claude --resume',
   codex: '  codex resume',
@@ -39,7 +46,8 @@ program
   .command('export <source> <id>')
   .description('Print handoff text from a session without launching anything')
   .option('--turns <n>', 'Number of recent turns to include', '6')
-  .action((source, id, opts) => {
+  .action((rawSource, id, opts) => {
+    const source = resolve_alias(rawSource)
     if (!VALID_TOOLS.has(source)) {
       console.error(`Unknown source: ${source}. Use 'claude', 'codex', or 'opencode'.`)
       process.exit(1)
@@ -52,7 +60,8 @@ program
   .command('ls [tool]')
   .description('List recent sessions (claude, codex, opencode, or all)')
   .option('--dir <path>', 'Filter by working directory')
-  .action((tool, opts) => {
+  .action((rawTool, opts) => {
+    const tool = rawTool ? resolve_alias(rawTool) : null
     const tools = tool ? [tool] : ['codex', 'claude', 'opencode']
     for (const t of tools) {
       if (!VALID_TOOLS.has(t)) {
@@ -64,7 +73,7 @@ program
   })
 
 // ── Manual argv parsing for: rses <target> with <source> [id] ──────────────
-const args = process.argv.slice(2)
+const args = process.argv.slice(2).map(resolve_alias)
 const withIdx = args.indexOf('with')
 
 if (withIdx === 1 && !['ls', 'export', '--help', '-h', '--version', '-V'].includes(args[0])) {

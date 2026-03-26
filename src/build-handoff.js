@@ -2,6 +2,7 @@ import { getGitContext } from './git-context.js'
 
 const TASK_MAX = 800
 const TURN_MAX = 600
+const LAST_ASSISTANT_MAX = 1200 // last assistant msg gets more room — it's the active work surface
 
 function trunc(str, max) {
   if (!str) return ''
@@ -16,53 +17,56 @@ export function buildHandoff(source, parsed) {
   const TOOL_NAMES = { codex: 'Codex', claude: 'Claude', opencode: 'OpenCode' }
   const toolName = TOOL_NAMES[source] || source
 
-  const lines = []
-  lines.push(`=== HANDOFF FROM ${toolName.toUpperCase()} SESSION ${id} ===`)
-
-  if (cwd) lines.push(`CWD: ${cwd}`)
-
   const git = cwd ? getGitContext(cwd, startCommit) : null
   const branch = git?.branch || parsedBranch || null
+
+  const lines = []
+
+  // ── Directive first — models process top-down ──────────────────────────
+  const article = /^[aeiou]/i.test(toolName) ? 'an' : 'a'
+  lines.push(`Continue this work. You are picking up from ${article} ${toolName} session.`)
+  if (cwd) lines.push(`Work in: ${cwd}`)
   if (branch) lines.push(`Branch: ${branch}`)
-
-  // Always include the session file path — the receiving model can Read it for full context
-  if (filePath) {
-    lines.push(`Session file: ${filePath}`)
-    lines.push(`  (Read this file for the complete conversation history if you need more context)`)
-  }
-
   lines.push('')
-  lines.push('Original task:')
+
+  // ── What was the goal ──────────────────────────────────────────────────
+  lines.push('Task:')
   lines.push(`  ${trunc(task, TASK_MAX) || '(not found)'}`)
 
+  // ── Git state — the ground truth of what's been done ───────────────────
   if (git) {
-    lines.push('')
     if (git.log) {
-      lines.push(startCommit ? 'What changed (commits since session started):' : 'Recent commits:')
+      lines.push('')
+      lines.push(startCommit ? 'Commits since session started:' : 'Recent commits:')
       git.log.split('\n').forEach(l => lines.push(`  ${l}`))
     }
     if (git.status) {
       lines.push('')
-      lines.push('Working tree:')
+      lines.push('Uncommitted changes:')
       git.status.split('\n').forEach(l => lines.push(`  ${l}`))
     }
   }
 
+  // ── Conversation context — last exchange is most valuable ──────────────
   if (turns.length) {
     lines.push('')
-    lines.push(`Last ${turns.length} messages:`)
-    for (const turn of turns) {
+    lines.push(`Recent conversation (${turns.length} messages):`)
+    for (let i = 0; i < turns.length; i++) {
+      const turn = turns[i]
       const label = turn.role === 'user' ? 'User' : toolName
-      lines.push(`  ${label}: ${trunc(turn.text, TURN_MAX)}`)
+      // Give the last assistant message more space — it's what was in-flight
+      const isLastAssistant = turn.role === 'assistant' && i === turns.length - 1
+      const max = isLastAssistant ? LAST_ASSISTANT_MAX : TURN_MAX
+      lines.push(`  ${label}: ${trunc(turn.text, max)}`)
     }
   }
 
-  lines.push('')
-  const readHint = filePath
-    ? ` Read the session file above if you need the full conversation.`
-    : ''
-  lines.push(`Pick up where ${toolName} left off.${readHint}`)
-  lines.push(`=== END HANDOFF ===`)
+  // ── Session file pointer for deep context ──────────────────────────────
+  if (filePath) {
+    lines.push('')
+    lines.push(`Full session transcript: ${filePath}`)
+    lines.push(`Read this file if you need the complete conversation history.`)
+  }
 
   return lines.join('\n')
 }
