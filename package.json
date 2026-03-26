@@ -1,5 +1,5 @@
 {
-  "name": "rsess",
+  "name": "rses-cli",
   "version": "0.1.0",
   "description": "Cross-resume between Claude Code, Codex CLI, and OpenCode sessions",
   "bin": {

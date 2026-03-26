@@ -14,7 +14,7 @@ Works in all 6 directions between Claude Code, Codex CLI, and OpenCode.
 ## Install
 
 ```bash
-npm i -g rsess
+npm i -g rses-cli
 ```
 
 Node.js 22+ required (uses built-in SQLite).
