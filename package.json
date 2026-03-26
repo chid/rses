@@ -15,7 +15,7 @@
     "type": "git",
     "url": "git+https://github.com/yazcaleb/rses.git"
   },
-  "homepage": "https://github.com/yazcaleb/rses",
+  "homepage": "https://github.com/yazcaleb/rses#readme",
   "author": "yazcaleb",
   "dependencies": {
     "commander": "^12.0.0"

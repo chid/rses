@@ -1,6 +1,15 @@
 # rses
 
-Cross-resume between Claude Code, Codex CLI, and OpenCode sessions. Pick up where one tool left off — in another.
+**Cross-resume between Claude Code, Codex CLI, and OpenCode.**
+Pick up where one AI coding agent left off — in another.
+
+```
+rses claude with codex --last
+```
+
+That's it. Claude launches with full context from your last Codex session: the original task, git diff, conversation history, and a pointer to the session file for deep-dive.
+
+Works in all 6 directions between Claude Code, Codex CLI, and OpenCode.
 
 ## Install
 
@@ -8,99 +17,95 @@ Cross-resume between Claude Code, Codex CLI, and OpenCode sessions. Pick up wher
 npm i -g rsess
 ```
 
-Requires Node.js 22+.
+Node.js 22+ required (uses built-in SQLite).
 
-## Usage
+## Quick start
 
 ```bash
-# Resume in Claude using context from your last Codex session
+# You were working in Codex. Now you want Claude to continue.
 rses claude with codex --last
 
-# Resume in Codex using context from your last Claude session
+# Or the other way around.
 rses codex with claude --last
 
-# Resume in OpenCode using context from your last Claude session
-rses opencode with claude --last
-
-# Any combination works
-rses claude with opencode --last
-rses codex with opencode --last
+# OpenCode works too — any combination.
 rses opencode with codex --last
+rses claude with opencode --last
+```
 
-# Use a specific session ID
-rses claude with codex 019d2406-38f9-7cb2-b912-099b1524e079
-rses codex with claude ses_46f04b499ffeE1j9dfy15efgf0
-rses claude with opencode ses_3168c88a6ffeE0lFh66PIlcrwB
+## What it does
 
-# Interactive session picker (no ID needed)
-rses claude with codex
+1. Reads the source tool's session data (JSONL files or SQLite)
+2. Extracts: original task, git log since session start, working tree status, last N conversation turns
+3. Includes a pointer to the full session file so the receiving model can `Read` it for complete history
+4. Launches the target tool with a structured handoff prompt as the first message
 
-# Print the handoff without launching (inspect it first)
-rses claude with codex --last --dry-run
+The receiving model is oriented on turn one. No re-explaining.
 
-# Pass flags through to the target tool
+## Commands
+
+### Handoff (main command)
+
+```bash
+rses <target> with <source> [session-id] [flags]
+
+# Examples
+rses claude with codex --last                    # most recent Codex session
+rses codex with claude ses_46f04b499ffe...       # specific Claude session
+rses opencode with codex                         # interactive picker
+rses claude with codex --last --dry-run           # print handoff, don't launch
+```
+
+### List sessions
+
+```bash
+rses ls                    # all tools
+rses ls codex              # just Codex
+rses ls claude             # just Claude
+rses ls opencode           # just OpenCode
+rses ls codex --dir .      # filter by working directory
+```
+
+### Export
+
+```bash
+rses export codex <id>           # print handoff to stdout
+rses export claude <id> --turns 10
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--last` | Use most recent session (no picker, no ID needed) |
+| `--dry-run` | Print the handoff text without launching |
+| `--dir <path>` | Filter sessions by working directory |
+| `--turns <n>` | Number of conversation turns to include (default: 6) |
+
+**Everything else is passed through to the target tool:**
+
+```bash
 rses claude with codex --last --dangerously-skip-permissions --model opus
-
-# Export handoff text to stdout
-rses export codex 019d2406-38f9-7cb2-b912-099b1524e079
-
-# List recent sessions
-rses ls codex
-rses ls claude
-rses ls opencode
-rses ls                  # all tools
-
-# Filter sessions by working directory
-rses ls codex --dir ~/repos/my-project
-rses claude with codex --last --dir ~/repos/my-project
-
-# Control how many conversation turns to include (default: 6)
-rses claude with codex --last --turns 10
-```
-
-## How it works
-
-`rses` reads the source tool's session data, extracts:
-- The original task
-- Git state since the session started (log + working tree)
-- The session file path (so the receiving model can read the full history)
-- The last N conversation turns
-
-It builds a structured handoff prompt and launches the target tool with it as the
-first message. The receiving model is oriented on turn one — no re-explaining.
-
-## Finding session IDs
-
-```bash
-rses ls codex            # list Codex sessions with IDs
-rses ls claude           # list Claude sessions with IDs
-rses ls opencode         # list OpenCode sessions with IDs
-```
-
-Or use the native pickers:
-```bash
-claude --resume          # Claude's interactive session picker
-codex resume             # Codex's interactive session picker
-```
-
-## Session storage
-
-| Tool     | Storage |
-|----------|---------|
-| Claude   | `~/.claude/transcripts/ses_<ID>.jsonl` |
-| Codex    | `~/.codex/state_5.sqlite` + `~/.codex/sessions/**/*.jsonl` |
-| OpenCode | `~/.local/share/opencode/opencode.db` (SQLite) |
-
-## Flag passthrough
-
-Any flag not recognized by `rses` is forwarded to the target tool:
-
-```bash
-rses claude with codex --last --dangerously-skip-permissions
 rses codex with claude --last --model o3-pro
 rses opencode with claude --last --provider anthropic
 ```
 
-## Platform support
+## How sessions are read
 
-macOS and Linux. Windows support planned.
+| Tool | Source | Upgrade-safe |
+|------|--------|-------------|
+| Claude Code | `~/.claude/transcripts/ses_*.jsonl` | Reads only `user`/`assistant` types |
+| Codex CLI | `~/.codex/state_*.sqlite` (auto-discovers version) + JSONL fallback | Handles both 2025 and 2026 schemas |
+| OpenCode | `~/.local/share/opencode/opencode.db` | Single JOIN query, reads stable columns only |
+
+All parsers are read-only and wrapped in try/catch — if a tool changes its format, rses degrades gracefully instead of crashing.
+
+## Requirements
+
+- **Node.js 22+** (for built-in `node:sqlite`)
+- At least one of: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex CLI](https://github.com/openai/codex), [OpenCode](https://github.com/opencode-ai/opencode)
+- macOS or Linux (Windows support planned)
+
+## License
+
+MIT
