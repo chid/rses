@@ -1,7 +1,7 @@
 # rses
 
-**Cross-resume between Claude Code, Codex CLI, and OpenCode.**
-Pick up where one AI coding agent left off — in another.
+**Cross-resume between Claude Code, Codex CLI, OpenCode, and Droid.**
+Pick up where one AI coding agent left off - in another.
 
 ```
 rses claude with codex --last
@@ -9,7 +9,7 @@ rses claude with codex --last
 
 That's it. Claude launches with full context from your last Codex session: the original task, git diff, conversation history, and a pointer to the session file for deep-dive.
 
-Works in all 6 directions between Claude Code, Codex CLI, and OpenCode.
+Works in all 12 directions between Claude Code, Codex CLI, OpenCode, and Droid.
 
 ## Install
 
@@ -31,6 +31,10 @@ rses codex with claude --last
 # OpenCode works too — any combination.
 rses opencode with codex --last
 rses claude with opencode --last
+
+# Droid sessions are supported too.
+rses codex with droid --last
+rses droid with claude --last
 ```
 
 ## What it does
@@ -53,6 +57,7 @@ rses <target> with <source> [session-id] [flags]
 rses claude with codex --last                    # most recent Codex session
 rses codex with claude ses_46f04b499ffe...       # specific Claude session
 rses opencode with codex                         # interactive picker
+rses droid with codex --last                     # most recent Droid session
 rses claude with codex --last --dry-run           # print handoff, don't launch
 ```
 
@@ -82,6 +87,7 @@ Power-user shorthand — type less, ship faster:
 | `cc`, `cl`, `c` | `claude` |
 | `cdx`, `cx`, `x` | `codex` |
 | `oc`, `o` | `opencode` |
+| `d`, `dr` | `droid` |
 | `w` | `with` |
 
 ```bash
@@ -114,13 +120,14 @@ rses opencode with claude --last --provider anthropic
 | Claude Code | `~/.claude/transcripts/ses_*.jsonl` | Reads only `user`/`assistant` types |
 | Codex CLI | `~/.codex/state_*.sqlite` (auto-discovers version) + JSONL fallback | Handles both 2025 and 2026 schemas |
 | OpenCode | `~/.local/share/opencode/opencode.db` | Single JOIN query, reads stable columns only |
+| Droid | `~/.factory/sessions/**/*.jsonl` | Reads session metadata plus user/assistant turns, strips system reminders |
 
 All parsers are read-only and wrapped in try/catch — if a tool changes its format, rses degrades gracefully instead of crashing.
 
 ## Requirements
 
 - **Node.js 22+** (for built-in `node:sqlite`)
-- At least one of: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex CLI](https://github.com/openai/codex), [OpenCode](https://github.com/opencode-ai/opencode)
+- At least one of: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex CLI](https://github.com/openai/codex), [OpenCode](https://github.com/opencode-ai/opencode), [Droid](https://docs.factory.ai/cli/getting-started/overview)
 - macOS or Linux (Windows support planned)
 
 ## License

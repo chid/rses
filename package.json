@@ -1,7 +1,7 @@
 {
   "name": "rses-cli",
   "version": "0.1.0",
-  "description": "Cross-resume between Claude Code, Codex CLI, and OpenCode sessions",
+  "description": "Cross-resume between Claude Code, Codex CLI, OpenCode, and Droid sessions",
   "bin": {
     "rses": "./bin/rses.js"
   },
@@ -23,6 +23,6 @@
   "engines": {
     "node": ">=22"
   },
-  "keywords": ["claude", "codex", "opencode", "ai", "cli", "resume", "session", "handoff"],
+  "keywords": ["claude", "codex", "opencode", "droid", "ai", "cli", "resume", "session", "handoff"],
   "license": "MIT"
 }

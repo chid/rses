@@ -14,7 +14,7 @@ function trunc(str, max) {
 export function buildHandoff(source, parsed) {
   const { cwd, uuid, sessionId, startCommit, branch: parsedBranch, task, turns, filePath } = parsed
   const id = uuid || sessionId || 'unknown'
-  const TOOL_NAMES = { codex: 'Codex', claude: 'Claude', opencode: 'OpenCode' }
+  const TOOL_NAMES = { codex: 'Codex', claude: 'Claude', opencode: 'OpenCode', droid: 'Droid' }
   const toolName = TOOL_NAMES[source] || source
 
   const git = cwd ? getGitContext(cwd, startCommit) : null

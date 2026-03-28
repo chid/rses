@@ -1,7 +1,7 @@
 import { spawn } from 'child_process'
 
 export function launchWithHandoff(tool, handoff, cwd, passthroughArgs = []) {
-  // opencode uses `opencode run <message>`, claude/codex accept prompt as bare arg
+  // opencode uses `opencode run <message>`, claude/codex/droid accept prompt as bare arg
   const args = tool === 'opencode'
     ? ['run', ...passthroughArgs, handoff]
     : [...passthroughArgs, handoff]
@@ -20,6 +20,7 @@ export function launchWithHandoff(tool, handoff, cwd, passthroughArgs = []) {
         claude: '  Install: npm i -g @anthropic-ai/claude-code',
         codex: '  Install: npm i -g @openai/codex',
         opencode: '  Install: see https://github.com/opencode-ai/opencode',
+        droid: '  Install: see https://docs.factory.ai/cli/getting-started/overview',
       }
       console.error(`\nError: '${tool}' not found on PATH. Is it installed?`)
       console.error(installHints[tool] || `  Install ${tool} and ensure it's on your PATH.`)

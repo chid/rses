@@ -1,6 +1,7 @@
 import { findCodexSessions, queryCodexSessions } from './parse-codex.js'
 import { findClaudeSessions } from './parse-claude.js'
 import { queryOpenCodeSessions } from './parse-opencode.js'
+import { queryDroidSessions } from './parse-droid.js'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
 
@@ -106,9 +107,21 @@ export function lsSessions(tool, filterDir = null) {
     }
   }
 
+  if (tool === 'droid') {
+    const dbRows = queryDroidSessions({ limit: 20, filterDir })
+    if (dbRows?.length) {
+      rows = dbRows.map(r => ({
+        id: r.id,
+        date: formatDate(r.updatedAt),
+        cwd: r.cwd || '—',
+        task: (r.title || '(no title)').slice(0, 70),
+      }))
+    }
+  }
+
   if (!rows) {
-    if (tool === 'opencode') {
-      console.log('No opencode sessions found.')
+    if (tool === 'opencode' || tool === 'droid') {
+      console.log(`No ${tool} sessions found.`)
       return
     }
 

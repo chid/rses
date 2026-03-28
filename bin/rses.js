@@ -18,16 +18,21 @@ import {
   parseOpenCodeSession, findOpenCodeSessionById, getLastOpenCodeSession,
   queryOpenCodeSessions
 } from '../src/parse-opencode.js'
+import {
+  parseDroidSession, findDroidSessionById, getLastDroidSession,
+  queryDroidSessions
+} from '../src/parse-droid.js'
 import { buildHandoff } from '../src/build-handoff.js'
 import { launchWithHandoff } from '../src/launch.js'
 import { lsSessions } from '../src/ls.js'
 import { pick } from '../src/picker.js'
 
-const VALID_TOOLS = new Set(['claude', 'codex', 'opencode'])
+const VALID_TOOLS = new Set(['claude', 'codex', 'opencode', 'droid'])
 const ALIASES = {
   cc: 'claude', cl: 'claude', c: 'claude',
   cdx: 'codex', cx: 'codex', x: 'codex',
   oc: 'opencode', o: 'opencode',
+  d: 'droid', dr: 'droid',
   w: 'with',
 }
 function resolve_alias(s) { return ALIASES[s] || s }
@@ -35,12 +40,13 @@ const RESUME_HINTS = {
   claude: '  claude --resume',
   codex: '  codex resume',
   opencode: '  opencode (select session from built-in picker)',
+  droid: '  droid --resume',
 }
 
 program
   .name('rses')
   .version('0.1.0')
-  .description('Cross-resume between Claude Code, Codex CLI, and OpenCode sessions')
+  .description('Cross-resume between Claude Code, Codex CLI, OpenCode, and Droid sessions')
 
 program
   .command('export <source> <id>')
@@ -49,7 +55,7 @@ program
   .action((rawSource, id, opts) => {
     const source = resolve_alias(rawSource)
     if (!VALID_TOOLS.has(source)) {
-      console.error(`Unknown source: ${source}. Use 'claude', 'codex', or 'opencode'.`)
+      console.error(`Unknown source: ${source}. Use 'claude', 'codex', 'opencode', or 'droid'.`)
       process.exit(1)
     }
     const handoff = resolveAndBuild(source, id, { ...opts, last: false })
@@ -58,14 +64,14 @@ program
 
 program
   .command('ls [tool]')
-  .description('List recent sessions (claude, codex, opencode, or all)')
+  .description('List recent sessions (claude, codex, opencode, droid, or all)')
   .option('--dir <path>', 'Filter by working directory')
   .action((rawTool, opts) => {
     const tool = rawTool ? resolve_alias(rawTool) : null
-    const tools = tool ? [tool] : ['codex', 'claude', 'opencode']
+    const tools = tool ? [tool] : ['codex', 'claude', 'opencode', 'droid']
     for (const t of tools) {
       if (!VALID_TOOLS.has(t)) {
-        console.error(`Unknown tool: ${t}. Use 'claude', 'codex', or 'opencode'.`)
+        console.error(`Unknown tool: ${t}. Use 'claude', 'codex', 'opencode', or 'droid'.`)
         process.exit(1)
       }
       lsSessions(t, opts.dir ? expandPath(opts.dir) : null)
@@ -181,6 +187,21 @@ async function pickSession(source, filterDir) {
 
     return pick(items, 'Select an OpenCode session:')
 
+  } else if (source === 'droid') {
+    const rows = queryDroidSessions({ limit: 30, filterDir }) || []
+    if (!rows.length) return null
+
+    const items = rows.map(r => {
+      const date = new Date(r.updatedAt).toISOString().slice(0, 16).replace('T', ' ')
+      const cwd = shorten(r.cwd)
+      return {
+        display: makeDisplay(date, cwd, r.title || basename(r.path, '.jsonl')),
+        value: r.path,
+      }
+    })
+
+    return pick(items, 'Select a Droid session:')
+
   } else {
     const files = findClaudeSessions(filterDir)
     if (!files.length) return null
@@ -285,8 +306,32 @@ async function resolveAndBuildAsync(source, id, opts) {
       process.exit(1)
     }
 
+  } else if (source === 'droid') {
+    if (opts.last) {
+      filePath = getLastDroidSession(filterDir)
+      if (!filePath) {
+        console.error('No Droid sessions found' + (filterDir ? ` in ${filterDir}` : '') + '.')
+        process.exit(1)
+      }
+    } else if (id) {
+      filePath = findDroidSessionById(id)
+      if (!filePath) {
+        console.error(`Droid session not found: ${id}`)
+        console.error('Tip: run `rses ls droid` to list sessions.')
+        process.exit(1)
+      }
+    } else {
+      filePath = await pickSession('droid', filterDir)
+      if (!filePath) { console.error('Cancelled.'); process.exit(0) }
+    }
+
+    try { parsed = parseDroidSession(filePath); parsed.filePath = filePath } catch (e) {
+      console.error(`Failed to parse Droid session: ${e.message}`)
+      process.exit(1)
+    }
+
   } else {
-    console.error(`Unknown source tool: ${source}. Use 'claude', 'codex', or 'opencode'.`)
+    console.error(`Unknown source tool: ${source}. Use 'claude', 'codex', 'opencode', or 'droid'.`)
     process.exit(1)
   }
 
@@ -315,8 +360,13 @@ function resolveAndBuild(source, id, opts) {
     const sessionId = opts.last ? getLastOpenCodeSession(filterDir) : findOpenCodeSessionById(id)
     if (!sessionId) { console.error(`OpenCode session not found: ${id}`); process.exit(1) }
     parsed = parseOpenCodeSession(sessionId)
+  } else if (source === 'droid') {
+    if (!id && !opts.last) { console.error('export requires a session ID.'); process.exit(1) }
+    filePath = opts.last ? getLastDroidSession(filterDir) : findDroidSessionById(id)
+    if (!filePath) { console.error(`Droid session not found: ${id}`); process.exit(1) }
+    parsed = parseDroidSession(filePath); parsed.filePath = filePath
   } else {
-    console.error(`Unknown source: ${source}. Use 'claude', 'codex', or 'opencode'.`)
+    console.error(`Unknown source: ${source}. Use 'claude', 'codex', 'opencode', or 'droid'.`)
     process.exit(1)
   }
 
@@ -326,10 +376,10 @@ function resolveAndBuild(source, id, opts) {
 
 async function runHandoff(target, source, id, opts) {
   if (!VALID_TOOLS.has(target)) {
-    console.error(`Unknown target: ${target}. Use 'claude', 'codex', or 'opencode'.`); process.exit(1)
+    console.error(`Unknown target: ${target}. Use 'claude', 'codex', 'opencode', or 'droid'.`); process.exit(1)
   }
   if (!VALID_TOOLS.has(source)) {
-    console.error(`Unknown source: ${source}. Use 'claude', 'codex', or 'opencode'.`); process.exit(1)
+    console.error(`Unknown source: ${source}. Use 'claude', 'codex', 'opencode', or 'droid'.`); process.exit(1)
   }
   if (target === source) {
     console.error(`Same source and target (${target}). Use the native resume:`)
